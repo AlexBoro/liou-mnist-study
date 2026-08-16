@@ -1,0 +1,50 @@
+# Run data and rendered output live in the Claude Science artifact store, not
+# here. fullfield_out/ alone is 818 MB (12 runs x ~70 MB of raw 5 ms field), and
+# the figure/movie bundles are another 77 MB -- git is the wrong home for both.
+fullfield_out/
+fullfield_out_envonly/
+pilot_out/
+pilot_out_v2/
+*.npz
+*.tar.gz
+*.zip
+
+# Rendered figures, pages and movies: regenerate with render_*.py / build# NOTE: scratch files here are named _chk*.py / _probe*.py. Do NOT use a bare
+# `_*.py` rule -- it also matches las_model/__init__.py and silently drops the
+# package initialiser, which makes `import las_model` fail on a fresh clone.
+_chk*.py
+_probe*.py
+_md.py
+adj_figs/
+adj_figs_webp/
+ff_figs/
+ff_figs_webp/
+ff_movies/
+fullfield_figs/
+*.mp4
+*.webp
+liou_*.html
+CHECK_*.png
+MERGE*.png
+GEO_*.png
+
+# BLIND KEY -- do not commit while the 54-run adjudication is unscored.
+# liou_pilot_blind_key.csv maps the shuffled R01..R54 ids back to run keys;
+# committing it defeats the blinding that the pilot's acceptance criterion
+# depends on. liou_pilot_classes.csv carries the automated verdicts and would
+# leak the answer the same way.
+liou_pilot_blind_key.csv
+liou_pilot_classes.csv
+
+# MNIST is not redistributed here; see docs/PORT_NOTES.md for the expected path.
+mnist_data/
+
+__pycache__/
+*.pyc
+.tmp/
+# NOTE: scratch files here are named _chk*.py / _probe*.py. Do NOT use a bare
+# `_*.py` rule -- it also matches las_model/__init__.py and silently drops the
+# package initialiser, which makes `import las_model` fail on a fresh clone.
+_chk*.py
+_probe*.py
+_md.py
