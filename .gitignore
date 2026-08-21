@@ -48,3 +48,19 @@ __pycache__/
 _chk*.py
 _probe*.py
 _md.py
+
+# BLIND KEYS for the two later scoring passes -- same reasoning as the pilot key
+# above: verify42_blind_key.csv and pass2_blind_key.csv map V##/P## back to run
+# keys, and committing either defeats a future re-scoring pass over these runs.
+verify42_blind_key.csv
+pass2_blind_key.csv
+
+# Scored-run bundles and rendered panels for the verification passes.
+verify42_out/
+confirmed12_out/
+p2_figs/
+p2_figs_webp/
+p2_movies/
+vf42_figs/
+vf42_figs_webp/
+vf42_movies/

@@ -102,8 +102,21 @@ def driven_channels(n=56, band=None):
     return np.where(dmask)[0], dmask
 
 
-def lfp_montage(z, n=56):
+def lfp_montage(z, n=56, sigma=None):
     """(T, 30) LFP montage + time axis in seconds from a run dict.
+
+    ``sigma`` is the LFP spatial constant in NORMALISED units (a fraction of
+    sheet extent).  ``None`` defers to :func:`lfp.lfp_2d`'s own default of
+    0.025, which is what every run scored before 2026-08-16 used -- so the
+    default path stays byte-identical and the 54-run pilot and 12 full-field
+    re-runs remain reproducible.
+
+    THIS IS NOT A GAIN KNOB.  The kernel is unnormalised, so widening the
+    electrode both scales the output (per-electrode weight sum 12.5 at 0.025
+    vs 228.8 at 0.11) AND changes which events clear the h-sigma peak
+    criterion in :func:`morph` -- measured -29% discharges on one pilot run
+    and +41% on another for the same 0.025 -> 0.11 change.  Any absolute
+    amplitude threshold is therefore specific to the sigma it was fit at.
 
     ``dt_record`` is DERIVED from the run's own time axis and is in
     MILLISECONDS.  It must never be hardcoded: lfp_2d uses it twice, and both
@@ -124,9 +137,10 @@ def lfp_montage(z, n=56):
             "dt_record=%.4g ms is outside the plausible range: the time axis is "
             "expected in MILLISECONDS. A value near 0.005 means seconds were "
             "passed." % dtr)
+    skw = {} if sigma is None else dict(sigma=float(sigma))
     L, _dT = LFP.lfp_2d(z["EPSC"], z["IPSC"],
                         EL30 % (n * n) if n != 84 else EL30, (n, n),
-                        dt_record=dtr, filter_hz=1.0)
+                        dt_record=dtr, filter_hz=1.0, **skw)
     return L, t_ms / 1000.0
 
 

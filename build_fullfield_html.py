@@ -46,25 +46,44 @@ WINDOW_S = 10.0
 # seizure or not -- so a slip between those two options now crosses a visible
 # group boundary instead of being a neighbouring lookalike.  Keys follow display
 # order, so the two "not a seizure" calls are 1-2 and the two seizure calls 3-4.
+# RENAMED 2026-08-19 (user): "TONIC SATURATION (not a seizure)" -> "TONIC
+# SATURATION".  The parenthetical asserted something the user has withdrawn --
+# "it may be a form of seizure that can't progress" -- so the option no longer
+# claims either way, and tonic saturation gets its own group rather than sitting
+# under the "not a seizure" header.
+#
+# KEY POSITIONS ARE DELIBERATELY UNCHANGED (1 entrained, 2 tonic, 3 focal,
+# 4 generalized, 5 other).  Keys follow display order, so re-grouping without
+# re-ordering keeps muscle memory intact -- moving an option to a different
+# number between two scoring passes would put a keystroke confound inside a
+# measurement of the scorer's own consistency.
+# RENAMED 2026-08-19 (user), after the second scoring pass:
+#   "FOCAL SEIZURE (Liou-like)"  -> "SEIZURE: early slow tonic wavefront -> fast traveling waves"
+#   "GENERALIZED SEIZURE (non-Liou morphology)" -> "SEIZURE: fast traveling waves at onset"
+# The old names asserted focal-vs-generalized SPATIAL EXTENT; the distinction the
+# user is actually making is ONSET DYNAMICS, which is what the new names state.
+# The first pattern is the one closer to what Liou et al. (2020) reported.
+# Key positions are again unchanged (1 entrained, 2 tonic, 3 slow-onset,
+# 4 fast-onset, 5 other) so a third pass stays comparable to the first two.
 OPT_GROUPS = [
-    ("not a seizure", ["ENTRAINED, not a seizure",
-                       "TONIC SATURATION (not a seizure)"]),
-    ("seizure",       ["FOCAL SEIZURE (Liou-like)",
-                       "GENERALIZED SEIZURE (non-Liou morphology)"]),
+    ("not a seizure", ["ENTRAINED, not a seizure"]),
+    ("",              ["TONIC SATURATION"]),
+    ("seizure",       ["SEIZURE: early slow tonic wavefront -> fast traveling waves",
+                       "SEIZURE: fast traveling waves at onset"]),
     ("",              ["OTHER"]),
 ]
 OPTIONS = [o for _lbl, opts in OPT_GROUPS for o in opts]
 VERDICT_TO_OPTION = {
     "FOCAL / entrained, no spread":      "ENTRAINED, not a seizure",
-    "GENERALIZED, non-Liou morphology":  "GENERALIZED SEIZURE (non-Liou morphology)",
-    "SEIZURE (Liou-like)":               "FOCAL SEIZURE (Liou-like)",
-    "TONIC SATURATION (not a seizure)":  "TONIC SATURATION (not a seizure)",
+    "GENERALIZED, non-Liou morphology":  "SEIZURE: fast traveling waves at onset",
+    "SEIZURE (Liou-like)":               "SEIZURE: early slow tonic wavefront -> fast traveling waves",
+    "TONIC SATURATION (not a seizure)":  "TONIC SATURATION",
 }
 OPT_COLOUR = {
     "ENTRAINED, not a seizure":            "#2e7d32",
-    "GENERALIZED SEIZURE (non-Liou morphology)": "#e67e22",
-    "FOCAL SEIZURE (Liou-like)":                 "#c0392b",
-    "TONIC SATURATION (not a seizure)":          "#8e24aa",
+    "SEIZURE: fast traveling waves at onset": "#e67e22",
+    "SEIZURE: early slow tonic wavefront -> fast traveling waves":                 "#c0392b",
+    "TONIC SATURATION":                          "#8e24aa",
     "OTHER":                                     "#455a64",
 }
 

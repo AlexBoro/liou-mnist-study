@@ -1890,20 +1890,50 @@ def test_confusable_scoring_options_are_not_adjacent():
     assert flat == BFH.OPTIONS, (flat, BFH.OPTIONS)
     assert len(set(flat)) == len(flat), flat
 
-    # NO TWO OPTIONS MAY SHARE A LEADING WORD.  This is the root fix, applied
-    # 2026-08-16 after the grouping above proved to be treating a symptom: the
+    _home = {o: gi for gi, (_l, opts) in enumerate(BFH.OPT_GROUPS) for o in opts}
+    home_of = _home.__getitem__
+
+    # NO TWO OPTIONS IN DIFFERENT GROUPS MAY SHARE A LEADING WORD.  Applied
+    # 2026-08-16 after the grouping above proved to treat a symptom: the
     # entrained option was renamed from "FOCAL entrained, not a seizure" to
-    # "ENTRAINED, not a seizure" so it no longer collides with "FOCAL SEIZURE
-    # (Liou-like)" at a glance.  A shared first word is what makes two options
-    # confusable when scanning a row of buttons, so the property is asserted
-    # generally rather than for that one pair.
+    # "ENTRAINED, not a seizure" so it no longer collided with "FOCAL SEIZURE
+    # (Liou-like)" at a glance.
+    #
+    # NARROWED 2026-08-19 from "no two options" to "no two options in different
+    # groups".  The user's renamed subtypes both begin "SEIZURE:" -- deliberately,
+    # since both ARE seizures and the shared prefix states that.  What made the
+    # original collision costly was that the two lookalikes sat on OPPOSITE sides
+    # of the seizure/not-seizure line, so a slip changed the answer to the
+    # question the study asks.  A slip between two same-group options changes only
+    # the subtype, which the second scoring pass showed is the genuinely
+    # ambiguous axis anyway (the only two calls that moved between passes were
+    # within the seizure class).  Cross-group collisions remain forbidden; the
+    # within-group pair is instead required to differ at its FIRST DISTINGUISHING
+    # WORD, checked below.
     firsts = {}
     for o in BFH.OPTIONS:
-        w = o.split()[0].strip(",").upper()
-        assert w not in firsts, (
-            "options %r and %r share the leading word %r -- they will be "
-            "confused when scanning" % (firsts[w], o, w))
-        firsts[w] = o
+        gi = home_of(o)
+        w = o.split()[0].strip(",:").upper()
+        prev = firsts.get(w)
+        assert prev is None or prev[1] == gi, (
+            "options %r and %r are in different groups and share the leading "
+            "word %r -- a slip between them changes the seizure call"
+            % (prev[0], o, w))
+        firsts[w] = (o, gi)
+
+    # Options sharing a leading word must diverge immediately after it, so the
+    # eye has a distinguishing token in a fixed position rather than having to
+    # read to the end of a long label.
+    from collections import defaultdict
+    byfirst = defaultdict(list)
+    for o in BFH.OPTIONS:
+        byfirst[o.split()[0].strip(",:").upper()].append(o)
+    for w, opts in byfirst.items():
+        if len(opts) < 2:
+            continue
+        seconds = [o.split()[1].strip(",:").upper() for o in opts]
+        assert len(set(seconds)) == len(seconds), (
+            "options %r share both their first and second word" % opts)
 
     # options that differ only by whether they ARE a seizure stay in different
     # groups, so a slip between them also crosses a visible divider
@@ -1935,6 +1965,294 @@ def test_score_join_maps_human_verdicts_onto_automated_classes():
     emitted = {"ICTAL", "ENTRAINED", "ACTIVE_NONICTAL", "QUIET_OR_BLOCK", "NO_DISCHARGE"}
     covered = {"ICTAL", "ENTRAINED"} | set(J.MAP["no-seizure"])
     assert emitted <= covered, emitted - covered
+
+
+def test_lfp_montage_sigma_defaults_to_lfp_2d_and_is_settable():
+    """sigma= must reach lfp_2d, and omitting it must change nothing.
+
+    The default path is load-bearing: every scored artifact (54 pilot runs, 12
+    full-field re-runs) was produced with no sigma argument, so if adding the
+    parameter altered the default output those runs would stop reproducing.
+    Widening it must also actually change the output -- a pass-through that is
+    silently ignored would let a "sigma 0.11" sweep run at 0.025.
+    """
+    import numpy as np
+    import inspect
+    from las_model import readout as RO
+    from las_model import lfp as LFP
+
+    assert "sigma" in inspect.signature(RO.lfp_montage).parameters
+
+    n, T = 56, 400
+    rng = np.random.default_rng(0)
+    z = dict(t=np.arange(T, dtype=float) * 5.0,
+             EPSC=rng.normal(size=(T, n * n)),
+             IPSC=rng.normal(size=(T, n * n)))
+
+    d_none = RO.lfp_montage(z, n=n)[0]
+    d_expl = RO.lfp_montage(z, n=n, sigma=0.025)[0]
+    wide = RO.lfp_montage(z, n=n, sigma=0.11)[0]
+
+    fin = np.isfinite(d_none)
+    assert np.array_equal(fin, np.isfinite(d_expl))
+    assert np.allclose(d_none[fin], d_expl[fin], rtol=0, atol=0), \
+        "sigma=None must be byte-identical to lfp_2d's own default"
+    # widening integrates ~18x more tissue, so amplitude must grow markedly
+    ratio = np.nanstd(wide[fin]) / np.nanstd(d_none[fin])
+    assert ratio > 3.0, "sigma=0.11 barely changed the montage (ratio %.2f)" % ratio
+
+
+def test_field_worker_refuses_verify_against_at_a_nondefault_sigma():
+    """Comparing a 0.11 montage to a 0.025 reference must raise, not 'mismatch'.
+
+    Without this the abort message would blame a divergent realization for what
+    is really the sigma change, sending the reader after a nonexistent
+    determinism bug.
+    """
+    import las_model.pilot_worker as PW
+    import inspect
+
+    p = inspect.signature(PW.run_and_reduce_field).parameters
+    assert "sigma" in p and p["sigma"].default is None
+
+    try:
+        PW.run_and_reduce_field({}, None, verify_against="pilot_out_v2",
+                                sigma=0.11)
+    except ValueError as e:
+        assert "sigma" in str(e).lower()
+    else:
+        raise AssertionError("expected ValueError for verify_against + sigma")
+
+
+def test_field_summary_records_sigma_and_chloride_floor():
+    """Every bundle must state its LFP sigma and its clamp count.
+
+    Amplitude is meaningless without the sigma that produced it, and a clamped
+    run left the model's valid range -- both were computed and then dropped
+    before 2026-08-16.
+    """
+    import inspect
+    import las_model.pilot_worker as PW
+
+    src = inspect.getsource(PW.run_and_reduce_field)
+    for key in ("lfp_sigma", "cl_floor_hits", "cl_floor_frac_units",
+                "cl_floor_frac_steps"):
+        assert key in src, "run_and_reduce_field summary lost %s" % key
+    # the constant must be read from lfp_2d, not duplicated as a literal
+    assert PW.LFP_DEFAULT_SIGMA == inspect.signature(
+        __import__("las_model.lfp", fromlist=["lfp_2d"]).lfp_2d
+    ).parameters["sigma"].default
+
+
+def test_verify42_blinding_hides_run_identity_and_is_a_bijection():
+    """V01..V42 must carry no hint of anchor status or parameter value.
+
+    The 42 runs being scored include the anchors whose expected verdicts are
+    under test, so a label like ``anchor_scale4_sim`` would reveal both that the
+    run carries a prediction and which parameter was moved.  The mapping must
+    also be a bijection and stable across rebuilds, or a re-render would produce
+    a different key than the one already scored against.
+    """
+    import build_verify42_page as B
+
+    keys = ["anchor_scale4_sim", "anchor_gE220_sim", "draw07_seq",
+            "anchor_phi0_m52_seq", "draw13_sim"]
+    m1 = B.blind_map(keys)
+    m2 = B.blind_map(list(reversed(keys)))
+
+    assert m1 == m2, "blind map must not depend on input order"
+    assert len(set(m1.values())) == len(keys), "ids collided"
+    assert set(m1) == set(keys)
+    for v in m1.values():
+        assert v.startswith("V") and v[1:].isdigit(), v
+        for leak in ("anchor", "draw", "scale", "gE", "phi0", "sim", "seq"):
+            assert leak not in v, (v, leak)
+
+
+def test_verify42_movie_files_are_blinded():
+    """Movie filenames must carry the blind id, never the run key.
+
+    The page writes the movie path into <video src>, so a file named
+    ``anchor_scale4_sim_overview.mp4`` would reveal both that the run carries a
+    prediction under test and which parameter was moved -- visible in the pane
+    and in the browser's network tab.  render_movies.overview() names by run
+    key, which is why the verify42 driver has its own entry point.
+    """
+    import os
+    import inspect
+    import render_verify42_movies as RVM
+
+    src = inspect.getsource(RVM.overview_blind)
+    assert "% lab" in src, "output name must be built from the blind id"
+    assert "key" not in src.split("os.path.join")[1].split(")")[0], \
+        "output name must not interpolate the run key"
+
+    if os.path.isdir(RVM.MOV_DIR):
+        bad = [f for f in os.listdir(RVM.MOV_DIR)
+               if f.endswith(".mp4") and not f.startswith("V")]
+        assert not bad, "un-blinded movie filenames present: %s" % bad
+
+
+def test_sheet_rule_reproduces_all_54_human_calls():
+    """The committed sheet rule must match every human-scored run.
+
+    54 runs, scored blind in two independent sessions (12 full-field + 42
+    verification).  This is the regression test the pilot's montage rule never
+    had: it existed only as a CSV column, so it could not be re-applied or
+    audited.  If a future change to the duty metric or the thresholds breaks
+    agreement, this fails with the offending runs named.
+    """
+    import csv
+    import os
+    from las_model import classify as CL
+
+    path = os.path.join(os.path.dirname(__file__), "data", "human_scored_54.csv")
+    rows = list(csv.DictReader(open(path, newline="", encoding="utf-8")))
+    assert len(rows) == 54, len(rows)
+
+    bad = []
+    for r in rows:
+        got, _margin = CL.sheet(float(r["unit_duty_median"]))
+        if got != r["human_class"]:
+            bad.append((r["run_key"], r["human_class"], got,
+                        float(r["unit_duty_median"])))
+    assert not bad, "sheet rule disagrees with human calls on: %s" % bad
+
+    # both scoring sessions must be covered -- a fixture that lost one would
+    # still pass the loop above while testing half of what it claims
+    srcs = {r["source"] for r in rows}
+    assert srcs == {"confirmed12", "verify42"}, srcs
+
+
+def test_sheet_thresholds_sit_in_the_gaps_not_on_the_data():
+    """Thresholds must be strictly inside the observed class gaps.
+
+    A threshold placed ON an extreme value classifies that run by tie-breaking
+    rather than by evidence, and would flip under a rounding change.  The lower
+    gap is wide (0.0016 -> 0.0490); the UPPER one is only 1.28x
+    (0.6750 -> 0.8673), which is why it is pinned here.
+    """
+    import csv
+    import os
+    from las_model import classify as CL
+
+    path = os.path.join(os.path.dirname(__file__), "data", "human_scored_54.csv")
+    rows = list(csv.DictReader(open(path, newline="", encoding="utf-8")))
+    duty = {c: [float(r["unit_duty_median"]) for r in rows
+                if r["human_class"] == c] for c in CL.CLASSES}
+
+    assert max(duty["NOT_SEIZURE"]) < CL.DUTY_SEIZURE < min(duty["SEIZURE"])
+    assert max(duty["SEIZURE"]) < CL.DUTY_TONIC < min(duty["TONIC_SATURATION"])
+
+
+def test_auto2_still_reproduces_the_pilot_labels_after_being_committed():
+    """Moving the pilot rule into a module must not change its 54 labels.
+
+    It is retired for new work but is the provenance of every published pilot
+    figure, so its outputs must stay byte-identical.
+    """
+    from las_model import classify as CL
+
+    # (amp, cv, ipi, asym) -> expected label; one case per arm, taken from the
+    # pilot runs that exercise each branch
+    cases = [
+        (928.2, 0.821, 745.0, 2.259, "QUIET_OR_BLOCK"),   # anchor_scale4_seq
+        (14869.2, 1.987, 235.0, 1.118, "ICTAL"),           # anchor_scale4_sim
+        (12078.3, 0.714, 755.0, 1.464, "ENTRAINED"),       # draw18_sim, 3x250
+        (10819.8, 2.901, 190.0, 0.830, "ACTIVE_NONICTAL"),  # draw17_seq
+    ]
+    for amp, cv, ipi, asym, want in cases:
+        assert CL.auto2(amp, cv, ipi, asym) == want, (amp, cv, ipi, asym)
+
+
+def test_unresolved_flags_the_narrow_upper_boundary():
+    """A run just under the tonic threshold must be flagged, not silently called.
+
+    The seizure/tonic gap is 1.28x, so a duty of 0.78 is not distinguishable
+    from tonic saturation on this evidence and must not be reported as a
+    confident seizure.
+    """
+    from las_model import classify as CL
+
+    assert CL.is_unresolved(0.78), CL.sheet(0.78)
+    assert not CL.is_unresolved(0.30), CL.sheet(0.30)
+    assert not CL.is_unresolved(0.0), CL.sheet(0.0)
+
+
+def test_pass2_blinding_differs_from_pass1_for_every_run():
+    """No run may keep its pass-1 blind id in the re-scoring page.
+
+    The second pass exists to measure whether the SCORER's criteria drifted.  If
+    a run kept its id, a remembered "V24 was a focal seizure" would make the
+    second call partly a recall of the first, and the agreement number would
+    overstate stability.  A different seed is not sufficient on its own -- a
+    permutation can fix points -- so this checks every run.
+    """
+    import build_pass2_page as B
+    import build_verify42_page as V
+
+    keys = ["anchor_scale4_sim", "anchor_gE220_sim", "draw07_seq",
+            "anchor_phi0_m52_seq", "draw13_sim", "draw16_seq", "draw04_seq",
+            "anchor_default_seq", "draw09_sim", "draw11_sim"]
+    p1, p2 = V.blind_map(keys), B.blind_map(keys)
+
+    assert B.SHUFFLE_SEED != V.SHUFFLE_SEED
+    fixed = [k for k in keys if p1[k] == p2[k]]
+    assert not fixed, "blind id survived from pass 1 for: %s" % fixed
+    assert len(set(p2.values())) == len(keys)
+    for v in p2.values():
+        assert v.startswith("P") and v[1:].isdigit(), v
+
+
+def test_pass2_page_covers_every_run_at_one_sigma():
+    """All 54 panels must come from sigma-0.11 bundles.
+
+    Mixing the 12 runs' original 0.025 panels with 42 at 0.11 would confound a
+    changed call with a changed instrument: at 0.025 summed electrode
+    sensitivity varies 625x across the sheet, at 0.11 it is near-uniform, so the
+    same run can look different without the scorer changing anything.
+    """
+    import json
+    import os
+    import numpy as np
+
+    dirs = ("verify42_out", "confirmed12_out")
+    if not all(os.path.isdir(d) for d in dirs):
+        return                              # bundles not built in this checkout
+    keys, sigmas = set(), set()
+    for d in dirs:
+        for f in os.listdir(d):
+            if not f.endswith(".npz"):
+                continue
+            keys.add(os.path.splitext(f)[0])
+            with np.load(os.path.join(d, f), allow_pickle=True) as z:
+                sigmas.add(json.loads(str(z["summary"]))["lfp_sigma"])
+    assert len(keys) == 54, len(keys)
+    assert sigmas == {0.11}, sigmas
+
+
+def test_tonic_saturation_option_makes_no_seizure_claim():
+    """The tonic option must not assert seizure status either way.
+
+    The user withdrew the "(not a seizure)" parenthetical on 2026-08-19 -- tonic
+    saturation may be a form of seizure that cannot progress -- so the button
+    text must not decide that for them.  Key POSITIONS must also be unchanged
+    from pass 1: keys follow display order, so re-numbering an option between the
+    two passes would put a keystroke confound inside the reliability measurement.
+    """
+    import build_fullfield_html as BFH
+
+    assert "TONIC SATURATION" in BFH.OPTIONS
+    assert "TONIC SATURATION (not a seizure)" not in BFH.OPTIONS
+    assert BFH.OPTIONS == ["ENTRAINED, not a seizure", "TONIC SATURATION",
+                           "SEIZURE: early slow tonic wavefront -> fast traveling waves",
+                           "SEIZURE: fast traveling waves at onset",
+                           "OTHER"], BFH.OPTIONS
+    # the stored sheet verdict must still map onto the renamed option, or every
+    # run of that class would score as a disagreement
+    assert BFH.VERDICT_TO_OPTION["TONIC SATURATION (not a seizure)"] == "TONIC SATURATION"
+    assert set(BFH.VERDICT_TO_OPTION.values()) <= set(BFH.OPTIONS)
+    assert set(BFH.OPT_COLOUR) == set(BFH.OPTIONS)
 
 
 if __name__ == "__main__":

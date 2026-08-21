@@ -12,6 +12,7 @@ import time
 import numpy as np
 
 from . import pilot_sweep as PS
+from . import lfp as LFP
 from . import readout as RO
 
 OUT = "pilot_out"
@@ -38,6 +39,11 @@ FIELD_EVERY = 200       # slow-state stride in steps: 200 ms (5 Hz) at the
                         # default dt=1.0 ms; tau_Cl=5000 ms so still 25x
                         # oversampled.  t_field is in MILLISECONDS.
 
+# The sigma lfp_2d uses when none is passed.  Read from the function's own
+# signature rather than duplicated, so this can never drift from it.
+LFP_DEFAULT_SIGMA = float(
+    __import__('inspect').signature(LFP.lfp_2d).parameters['sigma'].default)
+
 
 def field_envelope(rate, t, bin_s=FIELD_BIN_S):
     """Max-pool the rate field into bin_s bins.
@@ -60,7 +66,7 @@ def field_envelope(rate, t, bin_s=FIELD_BIN_S):
 
 def run_and_reduce_field(row, images, *, n=56, T_end=80000.0,
                          outdir="fullfield_out", keep_full=False,
-                         verify_against=None):
+                         verify_against=None, sigma=None):
     """Run one row and persist the FULL SHEET alongside the usual montage.
 
     Deliberately a separate entry point from run_and_reduce: the 54-run
@@ -73,7 +79,23 @@ def run_and_reduce_field(row, images, *, n=56, T_end=80000.0,
     full-field panel would silently describe different data than the montage
     that was scored.  The comparison is NaN-aware: the stored montage carries
     NaN in its first sample on all 30 channels (an LFP filter edge effect).
+
+    ``sigma`` overrides the LFP spatial constant; None keeps lfp_2d's default,
+    which is what every already-scored run used.  It is stamped into the
+    summary because amplitude is not comparable across sigmas.
     """
+    # Checked FIRST, before the ~40 s simulation and before the cache probe: a
+    # montage at one sigma cannot be verified against a reference stored at
+    # another (amplitudes differ ~18x and the discharge count moves in
+    # run-specific directions), so the comparison would abort with a message
+    # blaming a divergent realization for what is really the sigma change.
+    if verify_against and sigma is not None:
+        raise ValueError(
+            "verify_against is incompatible with sigma=%r: the reference "
+            "montages were stored at lfp_2d's default sigma, so a mismatch "
+            "would be the sigma change, not a divergent realization. Verify "
+            "at the default sigma, or re-run without verify_against." % sigma)
+
     key = run_key(row)
     path = os.path.join(outdir, key + ".npz")
     if os.path.exists(path):
@@ -85,7 +107,7 @@ def run_and_reduce_field(row, images, *, n=56, T_end=80000.0,
     z = PS.run_one(images, d, sequential=row["sequential"], n=n, T_end=T_end,
                    seed=row["seed"], field_every=FIELD_EVERY)
 
-    L, t_ = RO.lfp_montage(z, n=n)
+    L, t_ = RO.lfp_montage(z, n=n, sigma=sigma)
     chs, dmask = RO.driven_channels(n=n)
 
     if verify_against:
@@ -149,6 +171,16 @@ def run_and_reduce_field(row, images, *, n=56, T_end=80000.0,
         wall_s=round(time.time() - t0, 1), n_driven_ch=int(len(chs)),
         f_max=f_max, env_bin_s=FIELD_BIN_S, field_thr=FIELD_THR,
         keep_full=bool(keep_full), verified=bool(verify_against),
+        # LFP sigma is stamped on every bundle: amplitude is not comparable
+        # across sigmas, so a bundle that does not say which one produced it
+        # cannot be scored against any threshold.  None = lfp_2d's default.
+        lfp_sigma=(LFP_DEFAULT_SIGMA if sigma is None else float(sigma)),
+        # Physiological validity: nonzero means Cl_in hit the floor and the run
+        # left the range Liou Eq. 1 describes.  Computed by run_mnist and, until
+        # now, discarded here.
+        cl_floor_hits=int(z["cl_floor_hits"]),
+        cl_floor_frac_units=float(z["cl_floor_frac_units"]),
+        cl_floor_frac_steps=float(z["cl_floor_frac_steps"]),
         **sheet, **{k: float(row[k]) for k in PS.BASE},
     )
     payload["summary"] = json.dumps(summary)
