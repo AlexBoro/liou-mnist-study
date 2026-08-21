@@ -2345,5 +2345,123 @@ def test_every_anchor_matches_the_users_blind_score():
     assert not problems, problems
 
 
+def test_sweep50_draws_0_to_19_are_the_pilot_draws():
+    """The 50-draw sweep must reuse the pilot's first 20 draws exactly.
+
+    draw(k) is seeded from 1000+k alone, independent of the draw count, which is
+    what makes the 40 pilot draw runs reusable instead of re-simulated.  If a
+    future change made draw() depend on n_draws, the sweep would silently mix
+    two different parameter sets under the same run keys.
+    """
+    import run_sweep50 as R
+
+    R.assert_pilot_is_a_subset()          # raises SystemExit on drift
+    a, b = R.rows_by_key(20), R.rows_by_key(50)
+    draws = [k for k, v in a.items() if v["kind"] == "draw"]
+    assert len(draws) == 40, len(draws)
+    for k in draws:
+        for prm, _lo, _hi in R.PS.SPEC:
+            assert a[k][prm] == b[k][prm], (k, prm)
+
+
+def test_sweep50_admissibility_is_the_strict_chloride_rule():
+    """A run is inadmissible iff ANY unit ever hit the floor.
+
+    User decision 2026-08-19, chosen over a graded 0.005 threshold: a unit at the
+    0.1 mM floor is held by a numerical guard at E_Cl = -187 mV rather than
+    described by Liou Eq. 1, so the run did not test the equations.  A regression
+    that relaxed this to a nonzero threshold would silently readmit runs the
+    Methods section claims are excluded.
+    """
+    import run_sweep50 as R
+
+    def summ(frac):
+        return (None, dict(unit_duty_median=0.3, peak_simultaneous_frac=0.5,
+                           cl_floor_frac_units=frac, cl_floor_frac_steps=0.0,
+                           lfp_sigma=R.SIGMA))
+
+    man = R.rows_by_key()
+    k_seq = "draw00_seq"
+    have = {k: summ(0.0) for k in man}
+    have[k_seq] = summ(1.0 / 3136)                 # a single unit, one timestep
+    rows = {r["run_key"]: r for r in R.label_all(have)}
+    assert rows[k_seq]["admissible"] == 0, "one clamped unit must be enough"
+    assert rows["draw00_sim"]["admissible"] == 1
+
+    # and the PAIR is unusable when either arm is
+    assert rows[k_seq]["pair_admissible"] == 0
+    assert rows["draw00_sim"]["pair_admissible"] == 0, (
+        "a pair with one inadmissible arm is not a pair")
+    assert rows["draw01_seq"]["pair_admissible"] == 1
+
+
+def test_sweep50_refuses_bundles_from_a_different_sigma():
+    """A bundle stamped with another sigma must not join the sweep silently.
+
+    Amplitude differs ~6x and the discharge count moves run-specifically between
+    0.025 and 0.11, so pooling would mix two instruments in one table.
+    """
+    import json
+    import os
+    import numpy as np
+    import run_sweep50 as R
+
+    tmp = "_sigmatest_out"
+    os.makedirs(tmp, exist_ok=True)
+    path = os.path.join(tmp, "draw00_seq.npz")
+    np.savez_compressed(path, summary=json.dumps(
+        dict(key="draw00_seq", unit_duty_median=0.1, peak_simultaneous_frac=0.1,
+             cl_floor_frac_units=0.0, cl_floor_frac_steps=0.0, lfp_sigma=0.025)))
+    old = R.REUSE_DIRS
+    try:
+        R.REUSE_DIRS = (tmp,)
+        try:
+            R.existing()
+        except SystemExit as e:
+            assert "lfp_sigma" in str(e), str(e)
+        else:
+            raise AssertionError("a 0.025 bundle was accepted into a 0.11 sweep")
+    finally:
+        R.REUSE_DIRS = old
+        os.remove(path)
+        os.rmdir(tmp)
+
+
+def test_sweep50_anchor_gate_blocks_label_output():
+    """An anchor mismatch must stop labels being written, not warn beside them.
+
+    The anchors are the only runs whose answers are known independently, so a
+    mismatch means every draw label in the batch is suspect.  A gate that merely
+    printed would leave a plausible-looking labels file on disk.
+    """
+    import run_sweep50 as R
+
+    man = R.rows_by_key()
+    have = {k: (None, dict(unit_duty_median=0.3, peak_simultaneous_frac=0.5,
+                           cl_floor_frac_units=0.0, cl_floor_frac_steps=0.0,
+                           lfp_sigma=R.SIGMA)) for k in man}
+    # duty 0.3 -> SEIZURE for every run, so the NOT_SEIZURE/TONIC anchors fail
+    rows = R.label_all(have)
+    fails = R.anchor_gate(rows)
+    # 5 expect NOT_SEIZURE (gIlocal600 x2, gKmax120 x2, scale4_SEQ -- scale4_sim
+    # expects SEIZURE, which is the whole point of its per-config entry) and 4
+    # expect TONIC_SATURATION (gE220 x2, phi0_m52 x2).
+    assert len(fails) == 9, len(fails)
+    assert all("ANCHOR MISMATCH" in m for m in fails)
+
+    # and with a correct detector the same gate is silent
+    from las_model import classify as CL
+    import csv
+    import os
+    path = os.path.join(os.path.dirname(__file__), "data", "human_scored_54.csv")
+    duty = {r["run_key"]: float(r["unit_duty_median"])
+            for r in csv.DictReader(open(path, newline="", encoding="utf-8"))}
+    have2 = {k: (None, dict(unit_duty_median=duty.get(k, 0.0),
+                            peak_simultaneous_frac=0.0,
+                            cl_floor_frac_units=0.0, cl_floor_frac_steps=0.0,
+                            lfp_sigma=R.SIGMA)) for k in man}
+    assert R.anchor_gate(R.label_all(have2)) == []
+
+
 if __name__ == "__main__":
     _main()
