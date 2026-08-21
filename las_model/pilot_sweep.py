@@ -32,16 +32,82 @@ SPEC = (
     ("scale", 4.0, 37.0),
 )
 
-# known-verdict anchors: (tag, overrides, expected_verdict)
+# Known-verdict anchors: (tag, overrides, expected).
+#
+# REWRITTEN 2026-08-19.  The previous expectations were in a retired vocabulary
+# (ICTAL / BLOCK / NON_ICTAL / MARGINAL) that classify.sheet does not emit, so
+# there was nothing they could be compared against -- and nothing did compare
+# them: `expected` was written into every run summary and never checked.  The
+# anchors therefore tested nothing.  check_anchor() below supplies the missing
+# comparison, and these labels are now in the classifier's own three classes.
+#
+# SOURCE OF TRUTH: the user's blind scores, twice, on all seven anchors in both
+# configurations (pass 1 and pass 2, kappa 0.95 overall, and identical on every
+# anchor).  Not the original design intent -- two of the old labels were wrong:
+#
+#   anchor_scale4    said NON_ICTAL for both configs.  Correct for _seq
+#                    (entrained) and WRONG for _sim (scored a seizure both
+#                    times).  The spec's rationale, "weak drive, below
+#                    nucleation", holds only for the sequential arm: at scale 4
+#                    the simultaneous arm delivers ~41,000 units of |drive| per
+#                    step where the sequential arm delivers almost none.  Hence
+#                    the per-config mapping -- the reason `expected` may now be
+#                    a dict as well as a string.
+#   anchor_gIlocal600 said MARGINAL, a placeholder with no automated
+#                    counterpart, so it could never pass or fail.  Scored
+#                    entrained both times, so it is now a real check.
+#
+# The other five keep their meaning under new names: BLOCK -> TONIC_SATURATION
+# (the user's term for what they scored), NON_ICTAL -> NOT_SEIZURE, ICTAL ->
+# SEIZURE.
+#
+# `subtype` records the user's onset call where they scored a seizure.  Nothing
+# checks it yet -- no committed metric separates the two subtypes -- so it is
+# documentation for the onset measurement that will, and check_anchor() ignores
+# it deliberately rather than by omission.
 ANCHORS = (
-    ("anchor_default", {}, "ICTAL"),
-    ("anchor_gIlocal120", {"g_I_local": 120.0}, "ICTAL"),
-    ("anchor_gE220", {"g_E": 220.0}, "BLOCK"),
-    ("anchor_phi0_m52", {"phi0": -52.0}, "BLOCK"),
-    ("anchor_scale4", {"scale": 4.0}, "NON_ICTAL"),
-    ("anchor_gIlocal600", {"g_I_local": 600.0}, "MARGINAL"),
-    ("anchor_gKmax120", {"g_K_max": 120.0}, "NON_ICTAL"),
+    ("anchor_default", {}, "SEIZURE", "slow onset"),
+    ("anchor_gIlocal120", {"g_I_local": 120.0}, "SEIZURE", "fast onset"),
+    ("anchor_gE220", {"g_E": 220.0}, "TONIC_SATURATION", None),
+    ("anchor_phi0_m52", {"phi0": -52.0}, "TONIC_SATURATION", None),
+    ("anchor_scale4", {"scale": 4.0},
+     {"sequential": "NOT_SEIZURE", "simultaneous": "SEIZURE"}, "slow onset"),
+    ("anchor_gIlocal600", {"g_I_local": 600.0}, "NOT_SEIZURE", None),
+    ("anchor_gKmax120", {"g_K_max": 120.0}, "NOT_SEIZURE", None),
 )
+
+
+def expected_for(exp, sequential):
+    """Resolve an ANCHORS `expected` entry for one configuration.
+
+    A plain string applies to both configurations; a dict keyed
+    'sequential'/'simultaneous' gives them different expectations, which
+    anchor_scale4 needs.
+    """
+    if isinstance(exp, str) or exp is None:
+        return exp
+    return exp["sequential" if sequential else "simultaneous"]
+
+
+def check_anchor(key, expected, got):
+    """Compare one anchor's computed class against its expectation.
+
+    Returns None on agreement, else a message.  THIS IS THE CHECK THE ANCHORS
+    EXISTED FOR AND NEVER HAD: without it a detector that is simply wrong
+    produces a full sweep of plausible-looking labels, and the seven runs whose
+    answers are known contribute nothing.  Callers should treat a non-None
+    return as fatal to the sweep, not as a warning -- if the anchors disagree,
+    every draw label in the same batch is suspect.
+    """
+    if not expected:                      # draws carry no expectation
+        return None
+    if got == expected:
+        return None
+    return ("ANCHOR MISMATCH %s: expected %s, classifier says %s. The anchors "
+            "are the detector's own sanity check, so every draw in this batch "
+            "is suspect until this is resolved -- fix the detector, or re-score "
+            "this anchor and update ANCHORS with the new call."
+            % (key, expected, got))
 
 BASE = {
     "tau_Cl": 5000.0, "g_K_max": 40.0, "tau_K": 5000.0, "Cl_in_eq": 6.0,
@@ -94,9 +160,13 @@ def manifest(n_draws=20):
         for seq in (False, True):
             rows.append(dict(tag="draw%02d" % k, kind="draw", expected="",
                              sequential=seq, seed=k, **d))
-    for tag, ov, exp in ANCHORS:
+    for tag, ov, exp, subtype in ANCHORS:
         d = dict(BASE); d.update(ov)
         for seq in (False, True):
-            rows.append(dict(tag=tag, kind="anchor", expected=exp,
+            # expected_for resolves the per-config case (anchor_scale4); every
+            # other anchor gets the same string in both configurations.
+            rows.append(dict(tag=tag, kind="anchor",
+                             expected=expected_for(exp, seq),
+                             expected_subtype=subtype,
                              sequential=seq, seed=0, **d))
     return rows

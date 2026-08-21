@@ -2255,5 +2255,95 @@ def test_tonic_saturation_option_makes_no_seizure_claim():
     assert set(BFH.OPT_COLOUR) == set(BFH.OPTIONS)
 
 
+def test_anchor_expectations_are_in_the_classifier_vocabulary():
+    """Every anchor expectation must be a class classify.sheet can emit.
+
+    Before 2026-08-19 they were ICTAL / BLOCK / NON_ICTAL / MARGINAL -- a retired
+    vocabulary with no overlap with the classifier's output, so no comparison was
+    possible.  That is exactly the failure this pins: an expectation the detector
+    cannot produce is a check that can never pass, and it fails silently by never
+    being evaluated at all.
+    """
+    import las_model.pilot_sweep as PS
+    from las_model import classify as CL
+
+    for tag, _ov, exp, _sub in PS.ANCHORS:
+        vals = list(exp.values()) if isinstance(exp, dict) else [exp]
+        for v in vals:
+            assert v in CL.CLASSES, (tag, v, CL.CLASSES)
+
+    # and after resolution, every manifest anchor row too
+    for r in PS.manifest(2):
+        if r["kind"] == "anchor":
+            assert r["expected"] in CL.CLASSES, r
+
+
+def test_anchor_scale4_expects_different_answers_per_configuration():
+    """scale4 is the reason `expected` may be a dict.
+
+    Its old single NON_ICTAL label was right for the sequential arm and wrong for
+    the simultaneous one, which the user scored a seizure in both blind passes:
+    at scale 4 the simultaneous arm delivers ~41,000 units of drive per step and
+    the sequential arm almost none, so the two arms are not the same experiment.
+    A regression that flattened this back to one label would silently reinstate a
+    known-wrong expectation.
+    """
+    import las_model.pilot_sweep as PS
+    import las_model.pilot_worker as PW
+
+    man = {PW.run_key(r): r for r in PS.manifest(1)}
+    assert man["anchor_scale4_seq"]["expected"] == "NOT_SEIZURE"
+    assert man["anchor_scale4_sim"]["expected"] == "SEIZURE"
+    # the resolver must not silently accept an unknown configuration key
+    exp = dict(sequential="NOT_SEIZURE", simultaneous="SEIZURE")
+    assert PS.expected_for(exp, True) == "NOT_SEIZURE"
+    assert PS.expected_for(exp, False) == "SEIZURE"
+    assert PS.expected_for("SEIZURE", True) == "SEIZURE"
+
+
+def test_check_anchor_reports_disagreement_and_ignores_draws():
+    """The comparison itself: fires on mismatch, silent on agreement and draws.
+
+    Draws carry expected="" and must never trip the check, or every sweep would
+    fail on its own random points.
+    """
+    import las_model.pilot_sweep as PS
+
+    assert PS.check_anchor("a", "SEIZURE", "SEIZURE") is None
+    assert PS.check_anchor("a", "", "SEIZURE") is None          # a draw
+    assert PS.check_anchor("a", None, "SEIZURE") is None
+    msg = PS.check_anchor("anchor_scale4_sim", "SEIZURE", "NOT_SEIZURE")
+    assert msg and "anchor_scale4_sim" in msg and "SEIZURE" in msg
+
+
+def test_every_anchor_matches_the_users_blind_score():
+    """All 14 anchor runs must agree with the human calls they were set from.
+
+    This is the check the anchors existed for.  It runs off the stored duty
+    values rather than re-simulating, so it costs milliseconds; if a future
+    change to the duty metric or the thresholds moves an anchor, this names it.
+    """
+    import csv
+    import os
+    import las_model.pilot_sweep as PS
+    import las_model.pilot_worker as PW
+    from las_model import classify as CL
+
+    path = os.path.join(os.path.dirname(__file__), "data", "human_scored_54.csv")
+    duty = {r["run_key"]: float(r["unit_duty_median"])
+            for r in csv.DictReader(open(path, newline="", encoding="utf-8"))}
+    man = {PW.run_key(r): r for r in PS.manifest(20)}
+    anchors = {k: v for k, v in man.items() if v["kind"] == "anchor"}
+    assert len(anchors) == 14, len(anchors)
+
+    problems = []
+    for k, v in sorted(anchors.items()):
+        got, _margin = CL.sheet(duty[k])
+        m = PS.check_anchor(k, v["expected"], got)
+        if m:
+            problems.append(m)
+    assert not problems, problems
+
+
 if __name__ == "__main__":
     _main()
