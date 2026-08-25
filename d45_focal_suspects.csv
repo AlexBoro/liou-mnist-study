@@ -1,0 +1,11 @@
+run_key,config,sheet_class,unit_duty_median,p90,frac_over_1pct,peak,margin,admissible,direction
+draw22_sim,simultaneous,NOT_SEIZURE,0.0192,0.1987,0.8865,0.1295,0.0375,1,"labelled NOT_SEIZURE, above non-seizure ceiling"
+draw25_seq,sequential,NOT_SEIZURE,0.0185,0.0765,0.5615,0.0593,0.0734,1,"labelled NOT_SEIZURE, above non-seizure ceiling"
+draw25_sim,simultaneous,NOT_SEIZURE,0.0152,0.1306,0.537,0.1103,0.2375,1,"labelled NOT_SEIZURE, above non-seizure ceiling"
+draw45_sim,simultaneous,NOT_SEIZURE,0.0109,0.4884,0.5032,0.3217,0.4531,1,"labelled NOT_SEIZURE, above non-seizure ceiling"
+draw33_sim,simultaneous,NOT_SEIZURE,0.0001,0.3109,0.3999,0.1932,0.9938,0,"labelled NOT_SEIZURE, above non-seizure ceiling"
+draw48_sim,simultaneous,SEIZURE,0.0618,0.6408,0.5348,0.4346,2.0922,1,"labelled SEIZURE, below seizure floor"
+draw21_seq,sequential,SEIZURE,0.2787,0.8208,0.6996,0.7066,12.9344,1,"labelled SEIZURE, below seizure floor"
+draw32_seq,sequential,SEIZURE,0.2862,0.3658,0.7573,0.4139,13.3125,1,"labelled SEIZURE, below seizure floor"
+draw21_sim,simultaneous,SEIZURE,0.6185,0.9559,0.9273,0.8811,0.2269,0,"labelled SEIZURE, below seizure floor"
+draw47_sim,simultaneous,SEIZURE,0.1041,0.5759,0.9385,0.5855,4.2062,0,"labelled SEIZURE, below seizure floor"

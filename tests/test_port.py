@@ -2463,5 +2463,61 @@ def test_sweep50_anchor_gate_blocks_label_output():
     assert R.anchor_gate(R.label_all(have2)) == []
 
 
+def test_pass3_blinding_hides_role_and_differs_from_pass2():
+    """V3 ids must leak neither the run nor its ROLE on the page.
+
+    Pass 3 mixes three kinds of run: class suspects, seizures needing a subtype,
+    and six controls with stable prior calls.  A control that announced itself
+    would stop being a control, and a suspect that announced itself would bias
+    the scorer toward the class it is suspected of -- so role lives only in
+    pass3_blind_key.csv, never in the id, the filenames, or the page.
+    """
+    import build_pass3_page as B3
+
+    roles = B3.wanted()
+    assert len(roles) == 32, len(roles)
+    m = B3.blind_map(list(roles))
+    assert len(set(m.values())) == 32
+
+    for k, v in m.items():
+        assert v.startswith("V3-") and v[3:].isdigit(), v
+        for leak in ("anchor", "draw", "sim", "seq", "ctrl", "susp",
+                     "control", "suspect"):
+            assert leak not in v, (v, leak)
+
+    # a different shuffle seed from both earlier passes
+    assert B3.SHUFFLE_SEED not in (42, 20260819), B3.SHUFFLE_SEED
+
+    # the union really is 26 + 6, with the five double-duty runs counted once
+    from collections import Counter
+    c = Counter(r["role"] for r in roles.values())
+    assert c["control"] == 6, c
+    assert c["suspect"] + c["subtype_needed"] == 26, c
+
+
+def test_pass3_answers_both_questions_from_the_existing_options():
+    """No option may be added for pass 3: group = class, item = subtype.
+
+    The page settles the class question by which GROUP is picked and the subtype
+    question by which ITEM inside the seizure group is picked.  If a future
+    change flattened the groups, or added a subtype option outside the seizure
+    group, one pick would stop answering both and the page would need splitting.
+    """
+    import build_fullfield_html as BFH
+
+    groups = dict((lbl, opts) for lbl, opts in BFH.OPT_GROUPS if lbl)
+    assert "seizure" in groups and "not a seizure" in groups, list(groups)
+
+    sz = groups["seizure"]
+    assert len(sz) == 2, sz
+    assert all(o.startswith("SEIZURE:") for o in sz), sz
+    # the two subtypes are the ONLY options claiming a seizure
+    claim = [o for o in BFH.OPTIONS if o.startswith("SEIZURE:")]
+    assert set(claim) == set(sz), (claim, sz)
+    # and the non-seizure group makes no subtype claim
+    for o in groups["not a seizure"]:
+        assert "onset" not in o.lower() and "wavefront" not in o.lower(), o
+
+
 if __name__ == "__main__":
     _main()

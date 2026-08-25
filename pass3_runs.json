@@ -1,0 +1,194 @@
+{
+ "anchor_default_sim": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "control",
+  "sheet_class": "SEIZURE"
+ },
+ "anchor_gE220_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "control",
+  "sheet_class": "TONIC_SATURATION"
+ },
+ "anchor_gIlocal120_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "control",
+  "sheet_class": "SEIZURE"
+ },
+ "anchor_gIlocal120_sim": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "control",
+  "sheet_class": "SEIZURE"
+ },
+ "anchor_scale4_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 0.015,
+  "role": "control",
+  "sheet_class": "NOT_SEIZURE"
+ },
+ "draw00_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "control",
+  "sheet_class": "SEIZURE"
+ },
+ "draw20_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw20_sim": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw21_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 0.6996,
+  "role": "suspect",
+  "sheet_class": "SEIZURE"
+ },
+ "draw21_sim": {
+  "admissible": 0,
+  "frac_over_1pct": 0.9273,
+  "role": "suspect",
+  "sheet_class": "SEIZURE"
+ },
+ "draw22_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw22_sim": {
+  "admissible": 1,
+  "frac_over_1pct": 0.8865,
+  "role": "suspect",
+  "sheet_class": "NOT_SEIZURE"
+ },
+ "draw25_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 0.5615,
+  "role": "suspect",
+  "sheet_class": "NOT_SEIZURE"
+ },
+ "draw25_sim": {
+  "admissible": 1,
+  "frac_over_1pct": 0.537,
+  "role": "suspect",
+  "sheet_class": "NOT_SEIZURE"
+ },
+ "draw28_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw32_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 0.7573,
+  "role": "suspect",
+  "sheet_class": "SEIZURE"
+ },
+ "draw32_sim": {
+  "admissible": 0,
+  "frac_over_1pct": 0.9911,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw33_sim": {
+  "admissible": 0,
+  "frac_over_1pct": 0.3999,
+  "role": "suspect",
+  "sheet_class": "NOT_SEIZURE"
+ },
+ "draw34_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw34_sim": {
+  "admissible": 0,
+  "frac_over_1pct": 0.9971,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw39_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw39_sim": {
+  "admissible": 0,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw40_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw40_sim": {
+  "admissible": 0,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw42_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw42_sim": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw45_sim": {
+  "admissible": 1,
+  "frac_over_1pct": 0.5032,
+  "role": "suspect",
+  "sheet_class": "NOT_SEIZURE"
+ },
+ "draw47_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw47_sim": {
+  "admissible": 0,
+  "frac_over_1pct": 0.9385,
+  "role": "suspect",
+  "sheet_class": "SEIZURE"
+ },
+ "draw48_sim": {
+  "admissible": 1,
+  "frac_over_1pct": 0.5348,
+  "role": "suspect",
+  "sheet_class": "SEIZURE"
+ },
+ "draw49_seq": {
+  "admissible": 1,
+  "frac_over_1pct": 1.0,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ },
+ "draw49_sim": {
+  "admissible": 0,
+  "frac_over_1pct": 0.999,
+  "role": "subtype_needed",
+  "sheet_class": "SEIZURE"
+ }
+}
