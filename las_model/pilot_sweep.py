@@ -66,7 +66,15 @@ SPEC = (
 # documentation for the onset measurement that will, and check_anchor() ignores
 # it deliberately rather than by omission.
 ANCHORS = (
-    ("anchor_default", {}, "SEIZURE", "slow onset"),
+    # The two configurations of the default anchor got DIFFERENT onset calls
+    # (2026-08-29 corpus): _seq slow onset, _sim fast onset.  Recorded as a
+    # config-keyed dict, resolved by expected_for(), rather than the single
+    # "slow onset" that stood here -- that was true of _seq only and would have
+    # sent the eventual onset metric chasing a disagreement that is really a
+    # stale expectation.  This is the ONLY anchor whose subtype splits by
+    # configuration; the class does not split for it.
+    ("anchor_default", {}, "SEIZURE",
+     {"sequential": "slow onset", "simultaneous": "fast onset"}),
     ("anchor_gIlocal120", {"g_I_local": 120.0}, "SEIZURE", "fast onset"),
     ("anchor_gE220", {"g_E": 220.0}, "TONIC_SATURATION", None),
     ("anchor_phi0_m52", {"phi0": -52.0}, "TONIC_SATURATION", None),

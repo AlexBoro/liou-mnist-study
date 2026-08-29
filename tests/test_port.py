@@ -2301,6 +2301,54 @@ def test_anchor_scale4_expects_different_answers_per_configuration():
     assert PS.expected_for("SEIZURE", True) == "SEIZURE"
 
 
+def test_anchor_subtypes_match_the_human_fixture():
+    """The documented onset subtypes must match what the user actually scored.
+
+    Nothing enforces `subtype` at run time (check_anchor ignores it on purpose),
+    so it drifts silently -- and it had: anchor_default said "slow onset" for
+    both configurations while the corpus has _seq slow and _sim fast.  A stale
+    expectation here is worse than none, because the onset metric that is
+    eventually written will be judged against it.
+
+    Checked against tests/data/human_scored_54.csv, using the pass-2 call.
+    """
+    import csv
+    import os
+    import las_model.pilot_sweep as PS
+
+    # Prefer the LATEST pass for each run.  The V3 pass (2026-08-29) re-scored 6
+    # of these 54 under the finalised rubric and moved anchor_default_sim from
+    # slow to fast onset; reading subtype_pass2 unconditionally would pin the
+    # anchors to a superseded call.
+    fx = os.path.join(os.path.dirname(__file__), "data", "human_scored_54.csv")
+    scored = {}
+    with open(fx, newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            cls = row.get("human_class_pass3") or row["human_class"]
+            sub = row.get("subtype_pass3") or row["subtype_pass2"]
+            scored[row["run_key"]] = (cls, sub)
+
+    checked = 0
+    for tag, _ov, _exp, sub in PS.ANCHORS:
+        for cfg, seq in (("seq", True), ("sim", False)):
+            key = "%s_%s" % (tag, cfg)
+            if key not in scored:
+                continue
+            human_class, human_sub = scored[key]
+            want = PS.expected_for(sub, seq)
+            if want is None or human_class != "SEIZURE":
+                continue          # subtype is only meaningful for seizures
+            assert human_sub, "fixture has no pass-2 subtype for %s" % key
+            # ANCHORS writes "slow onset"; the fixture writes "SLOW_ONSET".
+            # Normalise both to the leading word so the test compares the call,
+            # not the spelling convention of whichever file it came from.
+            norm = lambda s: s.strip().lower().replace("_", " ").split()[0]
+            assert norm(want) == norm(human_sub), (
+                "%s: ANCHORS says %r, the user scored %r" % (key, want, human_sub))
+            checked += 1
+    assert checked >= 3, "only %d anchor subtypes were checkable" % checked
+
+
 def test_check_anchor_reports_disagreement_and_ignores_draws():
     """The comparison itself: fires on mismatch, silent on agreement and draws.
 

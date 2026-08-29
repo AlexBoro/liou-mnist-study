@@ -1,0 +1,33 @@
+blind_id,true_run_key,draw,cfg,role,prior_class,human_call,is_seizure,agrees_with_prior_on_seizure_axis,admissible,frac_over_1pct,scored_at
+V3-01,draw25_seq,draw25,seq,suspect,NOT_SEIZURE,SEIZURE: fast traveling waves at onset,True,False,1,0.5615,2026-08-25T05:04:20.010Z
+V3-02,draw21_sim,draw21,sim,suspect,SEIZURE,TONIC SATURATION,False,False,0,0.9273,2026-08-29T19:27:28.358Z
+V3-03,draw47_sim,draw47,sim,suspect,SEIZURE,"ENTRAINED, not a seizure",False,False,0,0.9385,2026-08-26T00:17:27.493Z
+V3-04,draw21_seq,draw21,seq,suspect,SEIZURE,TONIC SATURATION,False,False,1,0.6996,2026-08-29T19:36:03.957Z
+V3-05,draw32_seq,draw32,seq,suspect,SEIZURE,SEIZURE: fast traveling waves at onset,True,True,1,0.7573,2026-08-26T00:19:17.564Z
+V3-06,anchor_gIlocal120_seq,anchor_gIlocal120,seq,control,SEIZURE,SEIZURE: fast traveling waves at onset,True,True,1,1.0,2026-08-26T00:20:06.420Z
+V3-07,anchor_gIlocal120_sim,anchor_gIlocal120,sim,control,SEIZURE,SEIZURE: fast traveling waves at onset,True,True,1,1.0,2026-08-26T00:20:25.069Z
+V3-08,draw48_sim,draw48,sim,suspect,SEIZURE,SEIZURE: early slow tonic wavefront -> fast traveling waves,True,True,1,0.5348,2026-08-26T00:21:18.677Z
+V3-09,anchor_scale4_seq,anchor_scale4,seq,control,NOT_SEIZURE,"ENTRAINED, not a seizure",False,True,1,0.015,2026-08-26T00:22:15.364Z
+V3-10,draw20_seq,draw20,seq,subtype_needed,SEIZURE,SEIZURE: fast traveling waves at onset,True,True,1,1.0,2026-08-26T00:22:51.436Z
+V3-11,draw49_seq,draw49,seq,subtype_needed,SEIZURE,TONIC SATURATION,False,False,1,1.0,2026-08-29T19:40:26.885Z
+V3-12,draw32_sim,draw32,sim,subtype_needed,SEIZURE,SEIZURE: early slow tonic wavefront -> fast traveling waves,True,True,0,0.9911,2026-08-26T00:30:10.077Z
+V3-13,draw28_seq,draw28,seq,subtype_needed,SEIZURE,SEIZURE: early slow tonic wavefront -> fast traveling waves,True,True,1,1.0,2026-08-26T00:30:49.436Z
+V3-14,draw40_sim,draw40,sim,subtype_needed,SEIZURE,SEIZURE: fast traveling waves at onset,True,True,0,1.0,2026-08-26T00:31:27.445Z
+V3-15,draw45_sim,draw45,sim,suspect,NOT_SEIZURE,SEIZURE: fast traveling waves at onset,True,False,1,0.5032,2026-08-29T19:49:54.373Z
+V3-16,draw39_seq,draw39,seq,subtype_needed,SEIZURE,SEIZURE: early slow tonic wavefront -> fast traveling waves,True,True,1,1.0,2026-08-26T00:32:52.245Z
+V3-17,draw47_seq,draw47,seq,subtype_needed,SEIZURE,"ENTRAINED, not a seizure",False,False,1,1.0,2026-08-26T00:33:47.485Z
+V3-18,anchor_gE220_seq,anchor_gE220,seq,control,TONIC_SATURATION,TONIC SATURATION,False,True,1,1.0,2026-08-26T00:35:42.229Z
+V3-19,draw34_sim,draw34,sim,subtype_needed,SEIZURE,SEIZURE: fast traveling waves at onset,True,True,0,0.9971,2026-08-26T00:36:33.637Z
+V3-20,draw49_sim,draw49,sim,subtype_needed,SEIZURE,TONIC SATURATION,False,False,0,0.999,2026-08-29T20:05:37.230Z
+V3-21,draw34_seq,draw34,seq,subtype_needed,SEIZURE,SEIZURE: fast traveling waves at onset,True,True,1,1.0,2026-08-26T00:39:29.773Z
+V3-22,draw33_sim,draw33,sim,suspect,NOT_SEIZURE,SEIZURE: fast traveling waves at onset,True,False,0,0.3999,2026-08-26T00:40:22.132Z
+V3-23,draw42_seq,draw42,seq,subtype_needed,SEIZURE,SEIZURE: early slow tonic wavefront -> fast traveling waves,True,True,1,1.0,2026-08-29T20:13:08.894Z
+V3-24,draw25_sim,draw25,sim,suspect,NOT_SEIZURE,SEIZURE: fast traveling waves at onset,True,False,1,0.537,2026-08-29T20:14:42.734Z
+V3-25,anchor_default_sim,anchor_default,sim,control,SEIZURE,SEIZURE: fast traveling waves at onset,True,True,1,1.0,2026-08-29T20:15:21.174Z
+V3-26,draw22_seq,draw22,seq,subtype_needed,SEIZURE,SEIZURE: fast traveling waves at onset,True,True,1,1.0,2026-08-29T20:19:31.686Z
+V3-27,draw42_sim,draw42,sim,subtype_needed,SEIZURE,SEIZURE: early slow tonic wavefront -> fast traveling waves,True,True,1,1.0,2026-08-29T20:22:44.213Z
+V3-28,draw40_seq,draw40,seq,subtype_needed,SEIZURE,SEIZURE: fast traveling waves at onset,True,True,1,1.0,2026-08-29T20:23:14.797Z
+V3-29,draw20_sim,draw20,sim,subtype_needed,SEIZURE,SEIZURE: fast traveling waves at onset,True,True,1,1.0,2026-08-29T20:24:11.318Z
+V3-30,draw00_seq,draw00,seq,control,SEIZURE,SEIZURE: early slow tonic wavefront -> fast traveling waves,True,True,1,1.0,2026-08-29T20:24:41.030Z
+V3-31,draw22_sim,draw22,sim,suspect,NOT_SEIZURE,SEIZURE: fast traveling waves at onset,True,False,1,0.8865,2026-08-29T20:25:04.605Z
+V3-32,draw39_sim,draw39,sim,subtype_needed,SEIZURE,SEIZURE: early slow tonic wavefront -> fast traveling waves,True,True,0,1.0,2026-08-29T20:26:00.885Z
