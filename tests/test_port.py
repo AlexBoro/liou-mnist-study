@@ -2301,6 +2301,101 @@ def test_anchor_scale4_expects_different_answers_per_configuration():
     assert PS.expected_for("SEIZURE", True) == "SEIZURE"
 
 
+def test_manifest_keys_match_the_filenames_the_worker_writes():
+    """No two manifest rows may write the same bundle.
+
+    pilot_worker.run_key(row) is "<tag>_<seq|sim>" and does NOT include the
+    seed, so two rows that differ only in seed collide.  Overwriting an npz is
+    a normal operation, so the collision is silent: on 2026-08-29 six replicate
+    rows sharing tag "draw50"/"draw51" each wrote over the standard run.  112
+    runs executed, yet the directory held 107 bundles of the expected 113 --
+    106 written by that batch plus draw23_seq from an earlier check -- and
+    draw50_seq.npz ended up holding seed 900.  Nothing failed, nothing warned.
+
+    The consequence is worse than a lost run: the surviving bundle is a valid
+    simulation of the right parameters at the WRONG seed, so it reads as a
+    perfectly ordinary draw.
+    """
+    import las_model.pilot_worker as PW
+    import run_batch4 as B4
+
+    rows = B4.rows()          # calls _check_keys internally; this re-checks
+    written = {}
+    for key, row in rows.items():
+        got = PW.run_key(row)
+        assert got == key, "row %r would be written as %r" % (key, got)
+        assert got not in written, (
+            "rows %r and %r both write %r" % (written[got], key, got))
+        written[got] = key
+
+    # and the property that made it possible: seed is absent from run_key
+    a = dict(rows["draw50_seq"])
+    b = dict(a, seed=a["seed"] + 1)
+    assert PW.run_key(a) == PW.run_key(b), (
+        "run_key now includes the seed -- if so, relax this test, but the "
+        "manifest guard in run_batch4._check_keys should stay")
+
+
+def test_batch4_blinding_hides_kind_and_separates_replicates():
+    """The batch-4 shuffle must hide what each run is, not just its name.
+
+    Three properties, each of which fails silently and each of which destroys a
+    different thing the batch is for:
+
+      * A replicate group landing on adjacent ids shows the reader three
+        near-identical sheets in a row.  They then know they are being asked
+        the same question twice, and the label-noise estimate becomes a
+        consistency test taken knowingly -- which is not what it measures.
+      * An id reused from an earlier pass makes the read partly a recall test:
+        "P37 was a seizure" attaches to the id, not to the run.
+      * A blind id containing 'draw', 'anchor' or 'rep' gives the kind away, and
+        knowing a run is an anchor defeats it as a reliability control.
+
+    The seed convention is checked here too, because it is the one input that
+    was actually wrong: run k must use seed k, matching pilot_sweep.manifest.
+    Running draw k at seed 0 gives a different realisation of the same
+    parameters, which looks entirely reasonable and is not comparable with the
+    existing corpus.
+    """
+    import build_batch4_page as B4P
+    import las_model.pilot_sweep as PS
+    import run_batch4 as B4
+
+    rows = B4.rows()
+    m = B4P.blind_key()
+
+    assert set(m) == set(rows), "blind key and manifest disagree on the run set"
+    assert len(set(m.values())) == len(m), "blind ids collided"
+    for v in m.values():
+        for leak in ("draw", "anchor", "rep", "seq", "sim", "ctrl"):
+            assert leak not in v, "blind id %r leaks %r" % (v, leak)
+
+    # seed convention: a draw's seed is its index, matching PS.manifest
+    ref = {r["tag"]: r["seed"] for r in PS.manifest(n_draws=50)
+           if r["kind"] == "draw" and r["sequential"]}
+    for k, r in rows.items():
+        if r["kind"] == "draw" and r["tag"] in ref:
+            assert r["seed"] == ref[r["tag"]], (
+                "%s runs at seed %r but PS.manifest uses %r -- different "
+                "realisation, not comparable with the corpus"
+                % (k, r["seed"], ref[r["tag"]]))
+        if r["kind"] == "draw":
+            assert r["seed"] == int(r["tag"][4:]), (k, r["seed"], r["tag"])
+
+    # replicates: same parameters, different seed, non-adjacent ids
+    reps = [r for r in rows.values() if r["kind"] == "replicate"]
+    assert reps, "the batch has no replicate arm"
+    for r in reps:
+        # a replicate's own tag is "draw50r900"; its parameters come from the
+        # BASE draw, which is why base_tag exists separately
+        base = PS.draw(int(r["base_tag"][4:]))
+        for name, _lo, _hi in PS.SPEC:
+            assert r[name] == base[name], "replicate %s perturbs %s" % (r["tag"], name)
+        assert r["seed"] != int(r["base_tag"][4:]), "replicate reuses the standard seed"
+    gap = B4P._check_shuffle(m, rows)      # raises if any group is adjacent
+    assert gap >= 3, gap
+
+
 def test_anchor_subtypes_match_the_human_fixture():
     """The documented onset subtypes must match what the user actually scored.
 

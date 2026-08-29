@@ -1,0 +1,10 @@
+model,metric,value
+ridge (duty),CV R2,0.38
+grad boosting (duty),CV R2,0.323
+random forest (duty),CV R2,0.231
+grad boosting (duty),band precision,0.55
+ridge (duty),band precision,0.47
+forest variance,band precision,0.5
+(none) base rate,band precision,0.34285714285714286
+random forest (3-way),CV accuracy,0.69
+(none) majority class,CV accuracy,0.5714285714285714
