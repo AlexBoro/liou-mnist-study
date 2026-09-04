@@ -1,5 +1,63 @@
 # Liou run classification — criteria
 
+## Two stipulations, 2026-09-03 (read these first)
+
+Stated by the user and binding on every classification from here on. Both narrow
+the rubric below rather than replacing it.
+
+**1. The first three seconds do not count.** Classification is judged on the
+**evaluated portion, t = 3 s to the end of the run**. Anything in the first 3 s
+of stimulation is disregarded — onset transients, an early fast burst, an early
+tonic episode.
+
+*This closes the mixed-sequence boundary that was previously open.* The old rule
+said "under 1 to 3 seconds of a fast seizure pattern, then evolving to tonic
+saturation" is tonic saturation, while a "clear seizure" that later saturates
+stays a seizure — and "clear" never met "<1–3 s" at a stated threshold. Under
+the stipulation there is no gap to straddle: a fast pattern confined to the
+first 3 s is simply outside the window and cannot promote a run to seizure.
+A fast pattern surviving past 3 s is evaluated on its own terms.
+
+*Consequence for every stored statistic — measured, 2026-09-03.*
+`unit_duty_median` and `peak_simultaneous_frac` in the run bundles are computed
+over the **whole** run, so they no longer match the window the classification is
+judged on. Measured over the 112 scored batch-4 runs, using the stored 80 ms
+envelope (which tracks the 5 ms statistic at r = 0.97):
+
+* The exclusion is nearly inert. Median duty change **+0.0003**, largest
+  **0.037**; no run changes by more than 10% relative. Peak recruitment falls
+  for only 3 runs and by at most **0.005**.
+* **No run's event lives only in the excluded window.** Zero runs drop from
+  substantial peak recruitment to none, so nothing moves from event to
+  entrained. This is the check that mattered, and it came back clean.
+* Duty moves *up*, not down, because the first 3 s contains the pre-recruitment
+  ramp, which dilutes a whole-run average.
+
+That last point has a trap in it. `DUTY_TONIC = 0.80` was calibrated on
+whole-run duty. Recompute duty on t ≥ 3 s and keep that threshold, and two runs
+scored `fast traveling waves at onset` (`draw102_seq`, `draw77_seq`, adjusted
+duty 0.806 and 0.812) cross into tonic saturation — accuracy against the human
+calls falls from 101/112 to 99/112. Restoring it needs the threshold at ~0.837.
+
+So: **either evaluate the statistic on the whole run at DUTY_TONIC = 0.80, or on
+t ≥ 3 s with the threshold recalibrated — do not mix them.** The whole-run
+statistic is what the committed classifier is calibrated against and performs
+identically, so there is no reason to change it on this rubric's account. The
+0.837 figure was chosen to maximise accuracy on these same 112 runs, so it is
+in-sample and would need a fresh batch to confirm.
+
+**2. Tonic already present at t = 3 s, with fast waves later, is the
+tonic → fast-wave subtype.** If tonic activation is present at the *beginning*
+of the evaluated portion and fast waves appear after it, the run is
+`SEIZURE: early slow tonic wavefront -> fast traveling waves`.
+
+The reasoning: excluding the first 3 s can hide the tonic front *developing*,
+so a run whose front arose before 3 s would otherwise look like fast waves
+arriving without an antecedent front — the other subtype. The stipulation says
+the ordering is what matters, not whether the front's growth was observed.
+Reference run: **B4-019 = `draw68_seq`**, scored as this subtype.
+
+
 Stated by the user 2026-08-29, alongside the V3 scoring pass
 (`liou_fullfield_scores 8_29_26.csv`, 32 runs, blind). **This supersedes the
 earlier focal/generalized vocabulary.** The seizure subtype is now defined by
