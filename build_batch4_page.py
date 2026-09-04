@@ -111,16 +111,22 @@ def _check_shuffle(m, rows):
         nums = sorted(int(m[k].split("-")[1]) for k in ks)
         gap = min(b - a for a, b in zip(nums, nums[1:]))
         worst = gap if worst is None else min(worst, gap)
+        # This raise USED TO BE DEAD CODE.  It sat below the `return 0` in the
+        # `if not multi` branch below, so from the day that branch was added
+        # until 2026-09-03 no adjacency was ever rejected here -- the property
+        # held only because the regression test asserted it separately and the
+        # seed happened to give a gap of 6.  A guard that cannot fire is worse
+        # than no guard: it reads as protection in review.
+        if gap < 3:
+            raise SystemExit(
+                "replicate group %s lands at ids %s -- a gap of %d makes the "
+                "repeat visible. Change SHUFFLE_SEED." % (tag, nums, gap))
     if not multi:
         # No group has two members, so no replicate survived into the manifest.
         # That is the collapse signature of the tag-collision bug, not a clean
         # batch -- return 0 so the caller's `gap >= 3` fails loudly instead of
         # comparing None and raising an unrelated TypeError.
         return 0
-        if gap < 3:
-            raise SystemExit(
-                "replicate group %s lands at ids %s -- a gap of %d makes the "
-                "repeat visible. Change SHUFFLE_SEED." % (tag, nums, gap))
     for prior in PRIOR_KEYS:
         if not os.path.exists(prior):
             continue

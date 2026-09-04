@@ -69,3 +69,13 @@ pass3_blind_key.csv
 p3_figs/
 p3_figs_webp/
 p3_movies/
+
+# Re-scoring pass 5: renders, movies and the unblinding key stay out of git for
+# the same reason the earlier passes' did -- the key is the answer sheet.
+r5_figs/
+r5_figs_webp/
+r5_movies/
+rescore_out/
+rescore_blind_key.csv
+liou_rescore.html
+liou_rescore.zip

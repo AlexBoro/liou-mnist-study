@@ -1,0 +1,37 @@
+run_key,role,reason,first_read,bundle_dir
+anchor_default_seq,discrepant,intra-rater subtype flip,FAST_ONSET,batch4_out
+anchor_gIlocal120_seq,control,random within-class control,FAST_ONSET,batch4_out
+anchor_phi0_m52_seq,control,random within-class control,TONIC_SAT,batch4_out
+draw108_seq,control,random within-class control,SLOW_ONSET,batch4_out
+draw111_seq,discrepant,human vs automated (batch 4),FAST_ONSET,batch4_out
+draw112_seq,control,random within-class control,SLOW_ONSET,batch4_out
+draw119_seq,discrepant,human vs automated (batch 4),TONIC_SAT,batch4_out
+draw123_seq,control,random within-class control,TONIC_SAT,batch4_out
+draw127_seq,control,random within-class control,ENTRAINED,batch4_out
+draw128_seq,discrepant,human vs automated (batch 4),SLOW_ONSET,batch4_out
+draw129_seq,control,random within-class control,SLOW_ONSET,batch4_out
+draw132_seq,control,random within-class control,TONIC_SAT,batch4_out
+draw14_seq,discrepant,pass1/pass2,FAST_ONSET,rescore_out
+draw14_sim,discrepant,pass1/pass2,FAST_ONSET,rescore_out
+draw32_seq,discrepant,V3 config pair,SEIZURE: fast traveling waves at onset,rescore_out
+draw32_sim,discrepant,V3 config pair,SEIZURE: early slow tonic wavefront -> fast traveling waves,rescore_out
+draw43_seq,control,random within-class control,TONIC_SAT,batch4_out
+draw44_seq,discrepant,human vs automated (batch 4),FAST_ONSET,batch4_out
+draw46_seq,discrepant,human vs automated (batch 4),TONIC_SAT,batch4_out
+draw50_seq,discrepant,replicate group that split,FAST_ONSET,batch4_out
+draw50r51_seq,discrepant,replicate group that split,SLOW_ONSET,batch4_out
+draw50r900_seq,discrepant,replicate group that split,SLOW_ONSET,batch4_out
+draw50r901_seq,discrepant,replicate group that split,SLOW_ONSET,batch4_out
+draw55_seq,control,random within-class control,FAST_ONSET,batch4_out
+draw56_seq,discrepant,human vs automated (batch 4),TONIC_SAT,batch4_out
+draw62_seq,discrepant,human vs automated (batch 4),FAST_ONSET,batch4_out
+draw64_seq,control,random within-class control,ENTRAINED,batch4_out
+draw72_seq,control,random within-class control,ENTRAINED,batch4_out
+draw74_seq,control,random within-class control,FAST_ONSET,batch4_out
+draw79_seq,control,random within-class control,FAST_ONSET,batch4_out
+draw81_seq,discrepant,human vs automated (batch 4),FAST_ONSET,batch4_out
+draw82_seq,discrepant,human vs automated (batch 4),SLOW_ONSET,batch4_out
+draw83_seq,discrepant,human vs automated (batch 4),FAST_ONSET,batch4_out
+draw89_seq,control,random within-class control,ENTRAINED,batch4_out
+draw98_seq,discrepant,human vs automated (batch 4),FAST_ONSET,batch4_out
+draw99_seq,control,random within-class control,SLOW_ONSET,batch4_out

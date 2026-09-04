@@ -2336,6 +2336,103 @@ def test_manifest_keys_match_the_filenames_the_worker_writes():
         "manifest guard in run_batch4._check_keys should stay")
 
 
+def test_replicate_adjacency_guards_actually_fire():
+    """Both adjacency guards must REJECT an adjacent group, not just report it.
+
+    Two real defects motivate this, both of which left a guard that reads as
+    protection but cannot act:
+
+      * build_batch4_page._check_shuffle had its `if gap < 3: raise` placed
+        after a `return 0` and inside the `if not multi:` branch, so from the
+        day that branch was added until 2026-09-03 no adjacency was ever
+        rejected.  The property held only because a separate test asserted it
+        and the seed happened to give 6.
+      * build_rescore_page._groups derived a replicate's base tag with
+        base.split("r")[0], which splits on the "r" in "draw":
+        "draw50r51".split("r") is ['d', 'aw50', '51'].  Every replicate landed
+        in its own group of one, so the guard had nothing to compare and passed
+        vacuously.
+
+    So this test checks the guards on a shuffle that IS adjacent, and checks the
+    grouping finds the groups that exist.  A guard verified only on passing
+    input is not verified.
+    """
+    import numpy as np
+    import build_batch4_page as B4P
+    import build_rescore_page as BRP
+    import run_batch4 as B4
+
+    # --- grouping: the base tag must survive the "r" in "draw"
+    g = BRP._groups(["draw50_seq", "draw50r51_seq", "draw50r900_seq",
+                     "draw14_seq", "draw14_sim", "anchor_default_seq"])
+    assert set(g) == {"draw50", "draw14"}, g
+    assert len(g["draw50"]) == 3 and len(g["draw14"]) == 2, g
+
+    # --- rescore guard rejects an adjacent group
+    keys = sorted(BRP.rows())
+    ident = {k: "R5-%02d" % (i + 1) for i, k in enumerate(keys)}
+    try:
+        BRP._check_shuffle(ident)
+        raise AssertionError("rescore guard accepted an adjacent group")
+    except SystemExit as e:
+        assert "gap" in str(e), e
+
+    # --- and accepts the committed seed
+    gap = BRP._check_shuffle(BRP.blind_key())
+    assert gap >= 3, gap
+
+    # --- batch4 guard rejects an adjacent group
+    rows = B4.rows()
+    bkeys = sorted(rows)
+    bident = {k: "B4-%03d" % (i + 1) for i, k in enumerate(bkeys)}
+    try:
+        B4P._check_shuffle(bident, rows)
+        raise AssertionError("batch4 guard accepted an adjacent group")
+    except SystemExit as e:
+        assert "gap" in str(e), e
+
+
+def test_rescore_pass_carries_random_controls_not_easy_ones():
+    """The re-scoring set must contain controls, and they must not be selected.
+
+    The 20 discrepant runs were chosen BECAUSE they disagreed, so a flip rate
+    computed on them alone is the flip rate among runs already known to be hard
+    -- the same selection error that made the duty classifier look like it
+    scored 66% when an unbiased sample gives 89%.  The controls are what make
+    the discrepant rate interpretable, so their presence and their provenance
+    are both load-bearing.
+    """
+    import csv
+    import os
+
+    man = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                       "rescore_manifest.csv")
+    if not os.path.exists(man):
+        man = "rescore_manifest.csv"
+    if not os.path.exists(man):
+        return                                  # manifest not built in this tree
+
+    with open(man, newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    roles = {}
+    for r in rows:
+        roles.setdefault(r["role"], []).append(r)
+    assert set(roles) == {"discrepant", "control"}, sorted(roles)
+    assert len(roles["control"]) >= 8, len(roles["control"])
+
+    # controls must be labelled as random, not hand-picked
+    reasons = {r["reason"] for r in roles["control"]}
+    assert reasons == {"random within-class control"}, reasons
+
+    # every discrepancy class must state which one it is
+    assert all(r["reason"].strip() for r in roles["discrepant"])
+
+    # and the four classes must all be represented among the controls, so a
+    # class-specific reading problem cannot hide in an unsampled class
+    firsts = {r["first_read"] for r in roles["control"]}
+    assert len(firsts) >= 4, firsts
+
+
 def test_batch4_blinding_hides_kind_and_separates_replicates():
     """The batch-4 shuffle must hide what each run is, not just its name.
 
