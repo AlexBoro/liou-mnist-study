@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import glob
 import hashlib
+import os
 import struct
 
 import numpy as np
@@ -42,7 +43,9 @@ import numpy as np
 # Candidate locations for the raw MNIST training images, in preference order.
 IDX_PATHS = (
     "mnist_data/MNIST/raw/train-images-idx3-ubyte",
-    "~/dev/wc-mnist-study/mnist_data/MNIST/raw/train-images-idx3-ubyte",
+    # sibling wc-mnist-study checkout, or wherever MNIST_ROOT points
+    os.path.join(os.environ.get("MNIST_ROOT", "../wc-mnist-study/mnist_data"),
+                 "MNIST/raw/train-images-idx3-ubyte"),
 )
 
 N_POOL = 400          # the pilot pool; see the module docstring

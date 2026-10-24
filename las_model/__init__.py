@@ -2,6 +2,7 @@
 
 Source: https://github.com/jyunyouliou/LAS-Model  (MATLAB)
 Paper:  eLife 2020;9:e50927  doi:10.7554/eLife.50927
+Licence: the original is MIT, Copyright (c) 2019 Jyun-you Liou -- see LICENSE-LAS-Model
 """
 
 from .kernels import conv_field, gaussian_kernel_1d, gaussian_kernel_2d

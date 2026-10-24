@@ -686,9 +686,9 @@ def test_run_defaults_are_n56_and_80s():
 
 def _mnist_images(n=200):
     """First n MNIST training images as a (n, 784) float array in [0, 1]."""
-    import glob, struct
+    import glob, os, struct
     hits = glob.glob("mnist_data/MNIST/raw/train-images-idx3-ubyte") + \
-           glob.glob("~/dev/wc-mnist-study/mnist_data/MNIST/raw/train-images-idx3-ubyte")
+           glob.glob(os.path.join(os.environ.get("MNIST_ROOT", "../wc-mnist-study/mnist_data"), "MNIST/raw/train-images-idx3-ubyte"))
     if not hits:
         import pytest
         pytest.skip("MNIST idx file not available")
